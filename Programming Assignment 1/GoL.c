@@ -4,22 +4,32 @@
 //
 //  Created by Cunjun Yin
 //
+// test sumlation site https://bitstorm.org/gameoflife/ use: 10 cell row
 
 #include <stdlib.h>
-#include <omp.h>
+//#include <omp.h>
 #include <time.h>
-#include "linkedList.h"
+#include <stdio.h>
 
-// compile with gcc-6 -fopenmp -o lab1 lab1.c
-#define ALIVE 1
-#define DEAD -1
+// ignore: compile with gcc-6 -fopenmp -o lab1 lab1.c
+// compile with: gcc -Wall -std=c99 -o gol GoL.c
+static int DEAD = -1;
+static int ALIVE = 1;
 
 //header
-int**malloc2DArray(int, int)
+int**malloc2DArray(int, int);
+void printMap(int**);
+void init(void);
+void swapAndClean(int** , int **,int, int);
+void fate(int, int);
+int detect(int , int );
+int my_atoi(const char *);
+void display();
 
 //Globale Controlling Variable
 int MAXROW = 0, MAXCOL = 0;
-int **gameArr;
+int**map;
+int**newMap;
 
 // functions
 int main(int argc, char *argv[]){
@@ -28,8 +38,13 @@ int main(int argc, char *argv[]){
     }
     else {
         MAXROW = MAXCOL = my_atoi(argv[1]);
-        exit(EXIT_SUCCESS);
+        map = malloc2DArray(MAXROW, MAXROW);
+        newMap = malloc2DArray(MAXROW, MAXROW);
+        init();
+        display();
+        //exit(EXIT_SUCCESS);
     }
+    
     return 0;
 }
 
@@ -40,9 +55,11 @@ int**malloc2DArray(int m, int n){
         fprintf(stderr,"out of memory");
         exit(EXIT_FAILURE);
     }
-//#pragma omp parallel
     for(int i = 0; i < m; i++){
         array[i] = (int*)malloc(n*sizeof(int));
+        for(int j = 0; j< n; j++){
+            array[i][j] = DEAD;
+        }
         if(array[i]==NULL){
             fprintf(stderr,"out of memory");
             exit(EXIT_FAILURE);
@@ -67,53 +84,107 @@ int my_atoi(const char *str){
 
 int detect(int row, int col){
     int count = 0;
-    int r = row - 1; if( r < 0 ) r = 0;
-    int c = col - 1; if( c < 0 ) c = 0;
-    int maxR = row + 1; if( maxR > MAXROW) maxR = MAXROW;
-    int macC = col + 1; if( macR > MAXCOL) macR = MAXCOL;
-    
-    for(r = row - 1; r <= row+1; r++){
-        for(c = col - 1; c <= col+1; c++){
-            if(gameArr[r][c] == ALIVE) count++;
+    for( int r = row-1; r <= row+1; r++){
+        for(int c = col - 1; c <= col+1; c++){
+            if (r < 0 || r >= MAXROW || c < 0 || c >= MAXCOL) continue;
+            if(map[r][c] == ALIVE) count++;
         }
     }
-
-    if(gameArr[row][col] == ALIVE) count--;
+    
+    if(map[row][col] == ALIVE) count--;
     return count;
 }
 
-int init(void){
-    
-}
-
-void fate(int col, int row){
+void fate(int row, int col){
     switch (detect(row, col)) {
-        case 0:
-            statements
-            break;
-        case 1:
-            <#statements#>
-            break;
         case 2:
-            <#statements#>
+            newMap[row][col] = map[row][col];
+            break;
+        case 3:
+            newMap[row][col] = ALIVE;
             break;
         default:
+            newMap[row][col] = DEAD;
             break;
     }
 }
 
+void swapAndClean(int**a , int **b,int row, int col){
+    for(int i = 0 ; i< row; i++){
+        for(int j = 0 ; j< col; j++){
+            a[i][j] = b[i][j];
+            b[i][j] = DEAD;
+        }
+    }
+}
 
+void init(void){
+    /*
+generation
+     0 **********
+     
+     1 ********
+       ********
+       ********
+     
+     2   ******
+        *      *
+       *        *
+        *      *
+         ******
+     3
+          ****
+         ******
+        ********
+       **      **
+        ********
+         ******
+          ****
+        
+     */
+    
+    int stratr = MAXROW/2;
+    int stratc = MAXCOL/2;
+    map[stratr][stratc] = ALIVE;
+    map[stratr][stratc-1] = ALIVE;
+    map[stratr][stratc-2] = ALIVE;
+    map[stratr][stratc-3] = ALIVE;
+    map[stratr][stratc-4] = ALIVE;
+    map[stratr][stratc+5] = ALIVE;
+    map[stratr][stratc+4] = ALIVE;
+    map[stratr][stratc+3] = ALIVE;
+    map[stratr][stratc+2] = ALIVE;
+    map[stratr][stratc+1] = ALIVE;
+}
 
+void printMap(int**m){
+    for(int i = 0 ; i< MAXCOL; i++){
+        for(int j = 0 ; j< MAXROW; j++){
+            if(m[i][j] == ALIVE){
+                printf("*");
+            }else{
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
+void display(){
+    char next;
+    scanf("%c", &next);
+    while(next != 's'){
+        if(next == 'n'){
+            for (int row = 0; row < MAXROW; row++)
+            {
+                for (int col = 0; col < MAXCOL; col++)
+                {
+                    fate(row,col);
+                }
+            }
+            swapAndClean(map,newMap,MAXROW,MAXCOL);
+            printMap(map);
+        }
+        scanf("%c", &next);
+    }
+}
