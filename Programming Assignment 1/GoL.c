@@ -25,6 +25,7 @@ void fate(int, int);
 int detect(int , int );
 int my_atoi(const char *);
 void display();
+void timing(int);
 
 //Globale Controlling Variable
 int MAXROW = 0, MAXCOL = 0;
@@ -33,15 +34,17 @@ int**newMap;
 
 // functions
 int main(int argc, char *argv[]){
-    if(argc != 2) {
+    if(argc != 3) {
         exit(EXIT_FAILURE);
     }
     else {
         MAXROW = MAXCOL = my_atoi(argv[1]);
+        int Steps = my_atoi(argv[2]);
         map = malloc2DArray(MAXROW, MAXROW);
         newMap = malloc2DArray(MAXROW, MAXROW);
         init();
-        display();
+        //display();
+        timing(Steps);
         //exit(EXIT_SUCCESS);
     }
     
@@ -168,6 +171,7 @@ void printMap(int**m){
         }
         printf("\n");
     }
+    printf("\n\n");
 }
 
 void display(){
@@ -175,10 +179,8 @@ void display(){
     scanf("%c", &next);
     while(next != 's'){
         if(next == 'n'){
-            for (int row = 0; row < MAXROW; row++)
-            {
-                for (int col = 0; col < MAXCOL; col++)
-                {
+            for (int row = 0; row < MAXROW; row++){
+                for (int col = 0; col < MAXCOL; col++){
                     fate(row,col);
                 }
             }
@@ -187,4 +189,22 @@ void display(){
         }
         scanf("%c", &next);
     }
+}
+
+void timing(int steps){
+    int start = 0;
+    clock_t begin = clock();
+    while(start < steps){
+        for (int row = 0; row < MAXROW; row++){
+            for (int col = 0; col < MAXCOL; col++){
+                fate(row,col);
+            }
+        }
+        swapAndClean(map,newMap,MAXROW,MAXCOL);
+        //printMap(map);
+        start += 1;
+    }
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("time spent=%10.6f\n", time_spent);
 }
