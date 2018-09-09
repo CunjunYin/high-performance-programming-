@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 #include <omp.h>
-#include <time.h>
+#include <sys/time.h>
 #include <stdio.h>
 
 // ignore: compile with gcc-6 -fopenmp -o lab1 lab1.c
@@ -43,8 +43,30 @@ int main(int argc, char *argv[]){
         map = malloc2DArray(MAXROW, MAXROW);
         newMap = malloc2DArray(MAXROW, MAXROW);
         init();
-        //display();
-        timing(Steps);
+        
+        //clock_t begin = clock_start();
+        int a[100000];
+        int i,sum;
+        struct timeval start, end;
+        gettimeofday(&start, NULL);
+        
+        for(int i = 0; i < Steps;i++){
+            display();
+            swapAndClean(map,newMap,MAXROW,MAXCOL);
+            //printMap(map);
+        }
+        
+        gettimeofday(&end, NULL);
+        double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                 end.tv_usec - start.tv_usec) / 1.e6;
+        
+        printf("time=%12.10f\n",delta);
+        
+        //clock_t end = clock_stop();
+        //double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        //printf("time spent=%10.6f\n", time_spent);
+        
+        //timing(Steps);
         //exit(EXIT_SUCCESS);
     }
     
@@ -87,16 +109,12 @@ int my_atoi(const char *str){
 
 int detect(int row, int col){
     int count = 0;
-#pragma omp parallel reduction (+:ave)
-    {
-        #pragma omp for collapse(2)
         for( int r = row-1; r <= row+1; r++){
             for(int c = col - 1; c <= col+1; c++){
                 if (r < 0 || r >= MAXROW || c < 0 || c >= MAXCOL) continue;
                 if(map[r][c] == ALIVE) count++;
             }
         }
-    }
     if(map[row][col] == ALIVE) count--;
     return count;
 }
@@ -115,11 +133,13 @@ void fate(int row, int col){
 }
 
 void swapAndClean(int**a , int **b,int row, int col){
+    int i,j;
 #pragma omp parallel
     {
-        #pragma omp for collapse(2)
-        for(int i = 0 ; i< row; i++){
-            for(int j = 0 ; j< col; j++){
+#pragma omp barrier
+#pragma omp for private(i, j) nowait
+        for(i = 0 ; i< row; i++){
+            for(j = 0 ; j< col; j++){
                 a[i][j] = b[i][j];
                 b[i][j] = DEAD;
             }
@@ -181,40 +201,15 @@ void printMap(int**m){
 }
 
 void display(){
-    char next;
-    scanf("%c", &next);
-    while(next != 's'){
-        if(next == 'n'){
-            for (int row = 0; row < MAXROW; row++){
-                for (int col = 0; col < MAXCOL; col++){
-                    fate(row,col);
-                }
-            }
-            swapAndClean(map,newMap,MAXROW,MAXCOL);
-            printMap(map);
-        }
-        scanf("%c", &next);
-    }
-}
-
-void timing(int steps){
-    int start = 0;
-    clock_t begin = clock();
-    while(start < steps){
+    int row,col;
 #pragma omp parallel
-        {
-            #pragma omp for collapse(2)
-            for (int row = 0; row < MAXROW; row++){
-                for (int col = 0; col < MAXCOL; col++){
+    {
+#pragma omp barrier
+#pragma omp for private(row, col) nowait
+            for (row = 0; row < MAXROW; row++){
+                for (col = 0; col < MAXCOL; col++){
                     fate(row,col);
                 }
             }
-        }
-        swapAndClean(map,newMap,MAXROW,MAXCOL);
-        //printMap(map);
-        start += 1;
     }
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("time spent=%10.6f\n", time_spent);
 }

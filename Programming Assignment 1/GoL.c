@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 //#include <omp.h>
-#include <time.h>
+#include <sys/time.h>
 #include <stdio.h>
 
 // ignore: compile with gcc-6 -fopenmp -o lab1 lab1.c
@@ -43,8 +43,20 @@ int main(int argc, char *argv[]){
         map = malloc2DArray(MAXROW, MAXROW);
         newMap = malloc2DArray(MAXROW, MAXROW);
         init();
+        
+        int a[100000];
+        int i,sum;
+        struct timeval start, end;
+        gettimeofday(&start, NULL);
+        
         //display();
         timing(Steps);
+        
+        gettimeofday(&end, NULL);
+        double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                 end.tv_usec - start.tv_usec) / 1.e6;
+        
+        printf("time=%12.10f\n",delta);
         //exit(EXIT_SUCCESS);
     }
     
@@ -193,7 +205,6 @@ void display(){
 
 void timing(int steps){
     int start = 0;
-    clock_t begin = clock();
     while(start < steps){
         for (int row = 0; row < MAXROW; row++){
             for (int col = 0; col < MAXCOL; col++){
@@ -204,7 +215,4 @@ void timing(int steps){
         //printMap(map);
         start += 1;
     }
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("time spent=%10.6f\n", time_spent);
 }
