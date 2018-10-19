@@ -35,8 +35,12 @@ void readMatrix(char fileName[], int* row, int* col, float* data){
     fclose(dict);
 }
 
+int** matrixMutilplication(){
+    
+}
+
 int main(int argc, char**argv){
-    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o","3.txt","-k","1",NULL};
+    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o","3.txt","-k","1","3.txt",NULL};
     execve(args[0],args,environ);
     FILE *dict = fopen(argv[1],"r");
     int lines = getlines(dict);
