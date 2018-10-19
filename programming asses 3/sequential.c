@@ -2,53 +2,49 @@
 #include<stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-// compile with cc -std=c99 -Wall -Werror -pedantic -o seq  sequential.c
+
+// compile with gcc -o seq  sequential.c
+
+
 
 #define DELIMTER " "
+extern char**environ;
 
-void readMatrix(char fileName[]){
+int getlines(FILE* dict){
+    int lines = 0;
+    while(!feof(dict)){
+        char ch = fgetc(dict);
+        if(ch == '\n') lines++;
+    }
+    lines++;
+    return lines;
+}
+void readMatrix(char fileName[], int* row, int* col, float* data){
+    char line[BUFSIZ];
     FILE *dict = fopen(fileName,"r");
-    
-    char   line[BUFSIZ];
-    char *tempData = "";
-    //
-    int*row = (int *)malloc(sizeof(int)*0);
-    int*col = (int *)malloc(sizeof(int)*0);
-    float*data = (float *)malloc(sizeof(float)*10);
-    int sizeAllocated = 0;
-    //
+    int j  = 0;
     while(fgets(line, sizeof line, dict) != NULL ){
-        sizeAllocated++;
-        row = (int*)realloc(row,sizeAllocated);
-        col = (int*)realloc(col,sizeAllocated);
-        
-        tempData = strtok(line, DELIMTER);
-        row[sizeAllocated-1] = atoi(tempData);
-        
-        tempData = strtok(NULL, DELIMTER);
-        col[sizeAllocated-1] = atoi(tempData);
-        
-        tempData = strtok(NULL, DELIMTER);
-        data[sizeAllocated - 1] = atof(tempData);
-        printf("data[%d] %f\n",sizeAllocated-1,data[0]);
+        row[j] = atoi( strtok(line, DELIMTER) );
+        col[j] = atoi( strtok(NULL, DELIMTER) );
+        data[j] = atof( strtok(NULL, DELIMTER) );
+        j++;
     }
-    
-    /*for(int i = 0; i< sizeAllocated; i++){
-        printf("%d ",row[i]);
-    }
-    printf("\n");
-    for(int i = 0; i< sizeAllocated; i++){
-        printf("%d ",col[i]);
-    }*/
+    fclose(dict);
 }
 
-int main(int argc, char*argv[]){
-    readMatrix(argv[1]);
+int main(int argc, char**argv){
+    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o","3.txt","-k","1",NULL};
+    execve(args[0],args,environ);
+    FILE *dict = fopen(argv[1],"r");
+    int lines = getlines(dict);
+    int row[lines];
+    int col[lines];
+    float data[lines];
+    readMatrix(argv[1],row,col,data);
+    
+    
     return 0;
 }
-
-
-
-
-
