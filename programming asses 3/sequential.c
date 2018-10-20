@@ -4,21 +4,24 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "linkedList.h"
 
 
-// compile with gcc -o seq  sequential.c
-
-
+// compile with gcc -o seq  sequential.c linkedList.c
 
 #define DELIMTER " "
 extern char**environ;
+int sizeOfMatrix;
 
-int getlines(FILE* dict){
+
+int getlines(char fileName[]){
     int lines = 0;
+    FILE *dict = fopen(fileName,"r");
     while(!feof(dict)){
         char ch = fgetc(dict);
         if(ch == '\n') lines++;
     }
+    fclose(dict);
     lines++;
     return lines;
 }
@@ -35,19 +38,50 @@ void readMatrix(char fileName[], int* row, int* col, float* data){
     fclose(dict);
 }
 
-int** matrixMutilplication(){
+
+
+int caculation(int rowC, int colC, int*row1, int*col1, int*data1, int*row2, int* col2, int* data2){
+    int result = 0;
+    //int startIndex1,endIndex1,startIndex2, endIndex2;
+    
+    //TODO
+    return result;
     
 }
 
-int main(int argc, char**argv){
-    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o","3.txt","-k","1","3.txt",NULL};
+void matrixMutilplication(int*row1, int* col1, int*data1,int* row2,int* col2, int*data2 ,int sizeOne, int sizeTwo){
+    node*head  = NULL;
+    for(int i =0; i < sizeOfMatrix; i++ ){
+        for(int j =0; j < sizeOfMatrix; j++ ){
+            int result = caculation(i,j,row1,col1,data1,row2,col2,data2);
+            if(result !=0){
+                push(head,i,j,result);
+            }
+        }
+    }
+}
+
+void sortFile(char fileName[],char column[] ){
+    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o",fileName,"-k",column,fileName,NULL};
     execve(args[0],args,environ);
-    FILE *dict = fopen(argv[1],"r");
-    int lines = getlines(dict);
-    int row[lines];
-    int col[lines];
-    float data[lines];
-    readMatrix(argv[1],row,col,data);
+}
+
+int main(int argc, char**argv){
+    sortFile(argv[1],"1");
+    sortFile(argv[2],"2");
+    
+    int lines1 = getlines(argv[1]);
+    int row1[lines1];
+    int col1[lines1];
+    float data1[lines1];
+    
+    int lines2 = getlines(argv[2]);
+    int row2[lines2];
+    int col2[lines2];
+    float data2[lines2];
+    
+    readMatrix(argv[1],row1,col1,data1);
+    readMatrix(argv[2],row2,col2,data2);
     
     
     return 0;
