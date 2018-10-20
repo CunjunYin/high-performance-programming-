@@ -38,7 +38,55 @@ void readMatrix(char fileName[], int* row, int* col, float* data){
     fclose(dict);
 }
 
+int binarysearch(int* a, int value, int size){
+    int low, high, mid;
+    low = 0;
+    high = size-1;
+    while(low<=high){
+        mid = (low+high)/2;
+        if(a[mid]==value)
+            return mid;
+        if(a[mid]>value)
+            high = mid-1;
+        if(a[mid]<value)
+            low = mid+1;
+    }
+    return -1;
+}
 
+int InsertionSearch(int a[], int value, int low, int high){
+    int mid = low+(value-a[low])/(a[high]-a[low])*(high-low);
+    if(a[mid]==value)
+        return mid;
+    if(a[mid]>value)
+        return InsertionSearch(a, value, low, mid-1);
+    if(a[mid]<value)
+        return InsertionSearch(a, value, mid+1, high);
+    return -1;
+}
+
+//prform the search operation to get high and low index
+//******11111*******
+//      ^   ^
+void getLowAndHighIndex(int* array,int size, int value, int index, int*start, int* end){
+    // get high index
+    int i = index + 1;
+    for(    ; i< size; i++){
+        if(array[i]!= value){
+            *end = --i;
+            break;
+        }
+    }
+    
+    // get low index
+    i = index + -1;
+    for(    ; i< 0; i++ ){
+        if(array[i] != value){
+            *start = ++i;
+            break;
+        }
+    }
+}
 
 int caculation(int rowC, int colC, int*row1, int*col1, int*data1, int*row2, int* col2, int* data2){
     int result = 0;
@@ -59,6 +107,7 @@ void matrixMutilplication(int*row1, int* col1, int*data1,int* row2,int* col2, in
             }
         }
     }
+    //TODO perofrm matrix into file
 }
 
 void sortFile(char fileName[],char column[] ){
