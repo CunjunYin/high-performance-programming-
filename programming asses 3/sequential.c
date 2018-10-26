@@ -97,7 +97,7 @@ float perofrmCaculation(int*col1, float* data1, int*row2, float* data2, int low1
         for(int j = low2; j <= high2; j++){
             if( col1[i] == row2[j]  ){
                 sum += (data1[i] * data2[j]);
-                printf("%f  %f\n",data1[i],data2[j]);
+                //printf("%f  %f\n",data1[i],data2[j]);
                 break;
             }
         }
@@ -122,7 +122,7 @@ void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* co
     for(int i =1; i <= sizeOfMatrix; i++ ){
         for(int j =1; j <= sizeOfMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            //if(result!=0) push(head,i,j,result);
+            if(result!=0) Enqueue(i,j,result);
         }
     }
 }
@@ -174,6 +174,7 @@ int main(int argc, char**argv){
             readMatrix(argv[2],row2,col2,data2);
 
             matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
+            Print();
         }
         
     }

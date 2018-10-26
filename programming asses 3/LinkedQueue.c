@@ -47,7 +47,7 @@ int Front() {
 void Print() {
 	struct Node* temp = front;
 	while(temp != NULL) {
-		printf("%d, %d, %f ",temp->row, temp->col, temp->data);
+		printf("%d, %d, %f \n",temp->row, temp->col, temp->data);
 		temp = temp->next;
 	}
 	printf("\n");
