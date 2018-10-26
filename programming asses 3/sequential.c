@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "linkedList.h"
+#include "LinkedQueue.h"
 
 
-// compile with gcc -o seq  sequential.c linkedList.c
-
+// compile with gcc -o seq  sequential.c LinkedQueue.c
+#define MAX(a,b) (((a)>(b))?(a):(b))
 #define DELIMTER " "
 extern char**environ;
 int sizeOfMatrix = 0;
@@ -31,6 +31,8 @@ void readMatrix(char fileName[], int* row, int* col, float* data){
     while(fgets(line, sizeof line, dict) != NULL ){
         row[j] = atoi( strtok(line, DELIMTER) );
         col[j] = atoi( strtok(NULL, DELIMTER) );
+        sizeOfMatrix = MAX(row[j], sizeOfMatrix);
+        sizeOfMatrix = MAX(col[j], sizeOfMatrix);
         data[j] = atof( strtok(NULL, DELIMTER) );
         j++;
     }
@@ -163,7 +165,6 @@ int main(int argc, char**argv){
             int col1[lines1];
             float data1[lines1];
             
-            sizeOfMatrix = atoi(argv[3]);
             int lines2 = getlines(argv[2]);
             int row2[lines2];
             int col2[lines2];
