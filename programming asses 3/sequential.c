@@ -95,6 +95,7 @@ float perofrmCaculation(int*col1, float* data1, int*row2, float* data2, int low1
         for(int j = low2; j <= high2; j++){
             if( col1[i] == row2[j]  ){
                 sum += (data1[i] * data2[j]);
+                printf("%f  %f\n",data1[i],data2[j]);
                 break;
             }
         }
@@ -110,6 +111,7 @@ float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1,
     getLowAndHighIndex(col2, size2, colC, &startIndex2, &endIndex2);
     
     result  = perofrmCaculation(col1, data1, row2, data2, startIndex1, endIndex1, startIndex2, endIndex2);
+    
     return result;
     
 }
@@ -118,38 +120,41 @@ void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* co
     for(int i =1; i <= sizeOfMatrix; i++ ){
         for(int j =1; j <= sizeOfMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            //TODO
-            printf("%f ",result);
+            //if(result!=0) push(head,i,j,result);
         }
-        printf("\n");
     }
-    //TODO into file
 }
 
-void sortFile(char fileName[],char column[] ){
+int sortFile(char fileName[],char column[] ){
     char* args[] = {"/usr/bin/sort","-t","\t","-n","-o",fileName,"-k",column,fileName,NULL};
-    execve(args[0],args,environ);
+    return execve(args[0],args,environ);
 }
 
 int main(int argc, char**argv){
     
     //TODO fork error, dosent sort the file, second file sorted into reverse order.
     
-    pid_t pid =fork();
-    if(pid<0){
+    pid_t pid_1,pid_2;
+    if( (pid_1 = fork() ) < 0 ){
         perror("Fork Failed.");
-    }else if (pid == 0){
-        sortFile(argv[1],"1");
-        // does not perform the action should be the "pid" only does one operation and exit
-        // create another fork process to operate another file sort
-        sortFile(argv[2],"2");
-        //
+    }else if (pid_1 == 0){
+        int status_1 = sortFile(argv[1],"1");
+        int status_2 = 0;
         pid_t pid_2 =fork();
-        exit(EXIT_SUCCESS);
+        
+        if( (pid_2 = fork()) < 0){
+            perror("Fork Failed.");
+        }else if(pid_2 == 0){
+            status_2 = sortFile(argv[2],"2");
+        }else{
+            int returnStatus_2;
+            waitpid(pid_2, &returnStatus_2, 0);
+            exit(status_2);
+        }
+        exit(status_1);
     }else{
         int returnStatus;
-        waitpid(pid, &returnStatus, 0);
-        
+        waitpid(pid_1, &returnStatus, 0);
         if (returnStatus == 0)  // Verify child process terminated without error.
         {
             int lines1 = getlines(argv[1]);
