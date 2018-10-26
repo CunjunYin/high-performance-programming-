@@ -5,6 +5,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "LinkedQueue.h"
+#include <omp.h>
+#include <sys/time.h>
 
 
 // compile with gcc -o seq  sequential.c LinkedQueue.c
@@ -92,18 +94,17 @@ void getLowAndHighIndex(int* array,int size, int value, int*start, int* end){
 }
 
 float perofrmCaculation(int*col1, float* data1, int*row2, float* data2, int low1, int high1, int low2, int high2){
+    int i = high1, j = high2;
     float sum = 0;
-    for(int i = low1; i <= high1; i++){
-        for(int j = low2; j <= high2; j++){
+    for(i = low1 ; i <= high1; i++){
+        for( j = low2 ; j <= high2; j++){
             if( col1[i] == row2[j]  ){
                 sum += (data1[i] * data2[j]);
-                //printf("%f  %f\n",data1[i],data2[j]);
                 break;
             }
         }
     }
     return sum;
-    
 }
 
 float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1, int*row2, int* col2, float* data2, int size2){
@@ -119,12 +120,16 @@ float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1,
 }
 
 void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo){
+#pragma omp parallel
+{
+    #pragma omp for
     for(int i =1; i <= sizeOfMatrix; i++ ){
         for(int j =1; j <= sizeOfMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
             if(result!=0) Enqueue(i,j,result);
         }
     }
+}
 }
 
 int sortFile(char fileName[],char column[] ){
@@ -159,8 +164,11 @@ int main(int argc, char**argv){
         waitpid(pid_1, &returnStatus, 0);
         if (returnStatus == 0)  // Verify child process terminated without error.
         {
+            struct timeval start, end;
+            gettimeofday(&start, NULL);
+
             int lines1 = getlines(argv[1]);
-            printf("lines%d\n",lines1);
+            printf("lines%d \n",lines1);
             int row1[lines1];
             int col1[lines1];
             float data1[lines1];
@@ -175,6 +183,9 @@ int main(int argc, char**argv){
 
             matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
             Print();
+            gettimeofday(&end, NULL);
+            double delta = ((end.tv_sec  - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
+            printf("time=%12.10f\n",delta);
         }
         
     }
