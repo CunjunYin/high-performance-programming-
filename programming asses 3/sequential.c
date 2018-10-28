@@ -257,8 +257,8 @@ int main(int argc, char**argv){
     
         matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, &front, &rear);
         //Print();
-        mtype = FROM_WORKER;
-        MPI_Send(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+        //mtype = FROM_WORKER;
+        //MPI_Send(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
 
     }
 
