@@ -165,6 +165,15 @@ int main(int argc, char**argv){
 
     node* front = NULL;
     node* rear = NULL;
+
+    int lines1 = 0,
+        lines2 = 0;
+
+    int* row1 = NULL,
+        *row2 = NULL,
+        *col1= NULL,
+        *col2 = NULL;
+
     float *data1,
           *data2; 
 
@@ -183,18 +192,17 @@ int main(int argc, char**argv){
         printf("mpi_mm has started with %d tasks.\n",numtasks);
         printf("Initializing arrays...\n");
 
-        int lines1 = getlines(argv[1]);
-        printf("lines%d \n",lines1);
-        int row1[lines1];
-        int col1[lines1];
-        float data1[lines1];
-            
-        int lines2 = getlines(argv[2]);
-        int row2[lines2];
-        int col2[lines2];
-        float data2[lines2];
-        readMatrix(argv[1],&row1,&col1,&data1);
-        readMatrix(argv[2],&row2,&col2,&data2);
+        lines1 = getlines(argv[1]);
+        row1 = (int*)malloc(lines1*sizeof(int));
+        col1 = (int*)malloc(lines1*sizeof(int));
+        data1 = (float*)malloc(lines1*sizeof(float));
+                
+        lines2 = getlines(argv[2]);
+        row2 = (int*)malloc(lines2*sizeof(int));
+        col2 = (int*)malloc(lines2*sizeof(int));
+        data2 = (float*)malloc(lines2*sizeof(float));
+        readMatrix(argv[1],row1,col1,data1);
+        readMatrix(argv[2],row2,col2,data2);
 
         if (lines1 == 0 || lines2 == 0) {
             printf("Empty file\n");
@@ -202,22 +210,16 @@ int main(int argc, char**argv){
             exit(1);
         }
 
-        if(numworkers > sizeOfMatrix) numworkers = sizeOfMatrix;
-
         averow = sizeOfMatrix/numworkers;
         extra = sizeOfMatrix%numworkers;
         offset = 0;
 
         mtype = FROM_MASTER;
-        for (dest=1; dest<=numworkers; dest++){
-            if(dest == numworkers){
-                if(extra!=0){
-                    averow += extra;
-                }
-            }
+        for (dest = 1; dest <= numworkers; dest++){
+            rows = (dest <= extra) ? (averow + 1) : averow;
             printf("Sending %d rows to task %d offset=%d\n",rows,dest,offset);
             MPI_Send(&offset , 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&averow, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
 
             MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -229,22 +231,28 @@ int main(int argc, char**argv){
             MPI_Send(&row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-            offset = offset + averow + 1;
+            offset = offset + rows;
         }
     }
 
     if(taskid > MASTER){
         mtype = FROM_MASTER;
         MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&averow, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
         MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        row1 = (int*)malloc(lines1*sizeof(int));
+        col1 = (int*)malloc(lines1*sizeof(int));
+        data1 = (float*)malloc(lines1*sizeof(float));
         MPI_Recv(&row1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
 
         MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        row2 = (int*)malloc(lines2*sizeof(int));
+        col2 = (int*)malloc(lines2*sizeof(int));
+        data2 = (float*)malloc(lines2*sizeof(float));
         MPI_Recv(&row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
@@ -253,13 +261,13 @@ int main(int argc, char**argv){
         printf("averow = %d\n",averow);
         printf("sizeOfMatrix = %d", sizeOfMatrix);
 
-        i_toString(&row1,0,lines1);
-        i_toString(&col1,0,lines1);
-        f_toString(&data1,0,lines1);
+        i_toString(row1,0,lines1);
+        i_toString(col1,0,lines1);
+        f_toString(data1,0,lines1);
 
-        i_toString(&row2,0,lines2);
-        i_toString(&col2,0,lines2);
-        f_toString(&data2,0,lines2);
+        i_toString(row2,0,lines2);
+        i_toString(col2,0,lines2);
+        f_toString(data2,0,lines2);
         //matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, averow,sizeOfMatrix);
     }
     MPI_Finalize();
