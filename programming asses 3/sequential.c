@@ -187,7 +187,7 @@ int main(int argc, char**argv){
         row2 = (int*)malloc(lines2*sizeof(int));
         col2 = (int*)malloc(lines2*sizeof(int));
         data2 = (float*)malloc(lines2*sizeof(float));
-     
+     printf("%d\n", lines1);
         readMatrix(argv[1],row1,col1,data1);
         readMatrix(argv[2],row2,col2,data2);
 
@@ -200,8 +200,8 @@ int main(int argc, char**argv){
         averow = sizeOfMatrix/numworkers;
         extra = sizeOfMatrix%numworkers;
         offset = 0;
-        mtype = FROM_MASTER;
 
+        mtype = FROM_MASTER;
         for (dest=1; dest<=numworkers; dest++){
             rows = (dest <= extra) ? averow+1 : averow;
             printf("Sending %d rows to task %d offset=%d\n",rows,dest,offset);
