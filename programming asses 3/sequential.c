@@ -125,18 +125,15 @@ float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1,
     
 }
 
-void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo, int offset, int row, node* front, node* rear){
-    for(int i =offset; i <= row + offset; i++ ){
-        for(int j =1; j <= sizeOfMatrix; j++ ){
+void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo, int offset, int row, int matrixSize, node* front, node* rear){
+    int end = 0;
+    if ( (end = offset+averow) > sizeOfMatrix ) end =  matrixSize 
+    for(int i = offset; i <= end; i++ ){
+        for(int j =1; j <= matrixSize; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            if(result!=0) Enqueue(front, rear, i, j, result);
+            printf("%d %d %f",i,j,result);
         }
     }
-}
-
-int sortFile(char fileName[],char column[] ){
-    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o",fileName,"-k",column,fileName,NULL};
-    return execve(args[0],args,environ);
 }
 
 int main(int argc, char**argv){
@@ -187,7 +184,7 @@ int main(int argc, char**argv){
         row2 = (int*)malloc(lines2*sizeof(int));
         col2 = (int*)malloc(lines2*sizeof(int));
         data2 = (float*)malloc(lines2*sizeof(float));
-     printf("%d\n", lines1);
+
         readMatrix(argv[1],row1,col1,data1);
         readMatrix(argv[2],row2,col2,data2);
 
@@ -198,50 +195,53 @@ int main(int argc, char**argv){
         }
 
         averow = sizeOfMatrix/numworkers;
-        extra = sizeOfMatrix%numworkers;
+        if(averow <1) averow = 1;
         offset = 0;
 
         mtype = FROM_MASTER;
-        for (dest=1; dest<=numworkers; dest++){
-            rows = (dest <= extra) ? averow+1 : averow;
-            printf("Sending %d rows to task %d offset=%d\n",rows,dest,offset);
+        int dest = 1;
+        while(offset<sizeOfMatrix)
             MPI_Send(&offset , 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&averow, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&row1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&col1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&data1, lines1, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-
-            offset = offset + rows;
+            offset = offset + rows + 1;
+            dest++;
         }
 
-        /*mtype = FROM_WORKER;
-        for (i=1; i<=numworkers; i++){
-            source = i;
-            // TODO
-        }*/
+        offset++;
+        dest++;
+        MPI_Send(&offset , 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&averow, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&row1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&col1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&data1, lines1, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
     }
 
     if(taskid > MASTER){
         mtype = FROM_MASTER;
         MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&averow, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
         MPI_Recv(&row1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        printf("Received results from task %d\n",source);
-    
-        matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, front, rear);
-        //Print();
-        //mtype = FROM_WORKER;
-        //MPI_Send(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
 
+        matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, averow, sizeOfMatrix, front, rear);
     }
+    MPI_Finalize();
 
     return 0;
 }
