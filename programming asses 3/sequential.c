@@ -20,7 +20,7 @@
 extern char**environ;
 int sizeOfMatrix = 0;
 
-int result_row[10]
+int result_row[10];
 int result_col[10];
 float result_data[10];
 
@@ -174,7 +174,6 @@ int main(int argc, char**argv){
     averow, extra, offset; /* used to determine rows sent to each worker */
 
     int lines1 = getlines(argv[1]);
-    printf("lines%d \n",lines1);
     int row1[lines1];
     int col1[lines1];
     float data1[lines1];
@@ -198,7 +197,6 @@ int main(int argc, char**argv){
     if (taskid == MASTER){       
         printf("mpi_mm has started with %d tasks.\n",numtasks);
         printf("Initializing arrays...\n");
-        lines2 = getlines(argv[2]);
 
         readMatrix(argv[1],row1,col1,data1);
         readMatrix(argv[2],row2,col2,data2);
@@ -234,14 +232,15 @@ int main(int argc, char**argv){
         }
 
         mtype = FROM_WORKER;
-        for (i=1; i<=numworkers; i++){
+        for (int i=1; i<=numworkers; i++){
             source = i;
             MPI_Recv(&result_row, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
             MPI_Recv(&result_col, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
             MPI_Recv(&result_data, 10, MPI_FLOAT, source , mtype, MPI_COMM_WORLD, &status);
-            int i = 0;
-            while(result_data[i]!=0){
-                printf("%d %d %f\n",result_row[i],result_col[i],result_data[i]);
+            int j = 0;
+            while(result_data[j]!=0.0){
+                printf("%d %d %f\n",result_row[j],result_col[j],result_data[j]);
+                j++;
             }
         }
     }
