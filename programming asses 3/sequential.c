@@ -163,19 +163,16 @@ int main(int argc, char**argv){
     rows, /* rows of matrix A sent to each worker */
     averow, extra, offset; /* used to determine rows sent to each worker */
 
-    node* front = NULL;
-    node* rear = NULL;
-
-    int lines1 = 0,
-        lines2 = 0;
-
-    int* row1 = NULL,
-        *row2 = NULL,
-        *col1= NULL,
-        *col2 = NULL;
-
-    float *data1,
-          *data2; 
+    int lines1 = getlines(argv[1]);
+    printf("lines%d \n",lines1);
+    int row1[lines1];
+    int col1[lines1];
+    float data1[lines1];
+        
+    int lines2 = getlines(argv[2]);
+    int row2[lines2];
+    int col2[lines2];
+    float data2[lines2];
 
     MPI_Status status;
     MPI_Init(&argc,&argv);
@@ -192,15 +189,6 @@ int main(int argc, char**argv){
         printf("mpi_mm has started with %d tasks.\n",numtasks);
         printf("Initializing arrays...\n");
 
-        lines1 = getlines(argv[1]);
-        row1 = (int*)malloc(lines1*sizeof(int));
-        col1 = (int*)malloc(lines1*sizeof(int));
-        data1 = (float*)malloc(lines1*sizeof(float));
-                
-        lines2 = getlines(argv[2]);
-        row2 = (int*)malloc(lines2*sizeof(int));
-        col2 = (int*)malloc(lines2*sizeof(int));
-        data2 = (float*)malloc(lines2*sizeof(float));
         readMatrix(argv[1],row1,col1,data1);
         readMatrix(argv[2],row2,col2,data2);
 
@@ -242,17 +230,11 @@ int main(int argc, char**argv){
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
         MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        row1 = (int*)malloc(lines1*sizeof(int));
-        col1 = (int*)malloc(lines1*sizeof(int));
-        data1 = (float*)malloc(lines1*sizeof(float));
         MPI_Recv(&row1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
 
         MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        row2 = (int*)malloc(lines2*sizeof(int));
-        col2 = (int*)malloc(lines2*sizeof(int));
-        data2 = (float*)malloc(lines2*sizeof(float));
         MPI_Recv(&row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
