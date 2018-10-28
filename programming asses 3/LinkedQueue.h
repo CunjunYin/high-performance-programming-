@@ -2,14 +2,14 @@
 #define HEADER_FILE
 #endif
 
-struct Node {
+typedef struct Node {
 	int row;
 	int col;
 	float data;
 	struct Node* next;
-};
+} node;
 
-void Enqueue(struct Node* front, struct Node* rear, int row, int col, float data);
-void Dequeue(struct Node* front, struct Node* rear);
-int Front(struct Node* front);
-void Print(struct Node* front);
+void Enqueue(node* , node*, int , int , float );
+void Dequeue(node*, node* );
+int Front( node* );
+void Print(node*);
