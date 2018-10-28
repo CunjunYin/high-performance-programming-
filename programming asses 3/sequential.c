@@ -4,12 +4,19 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <mpi.h>
 #include "LinkedQueue.h"
 
 
 // compile with gcc -o seq  sequential.c LinkedQueue.c
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define DELIMTER " "
+#define MASTER 0 /* taskid of first task */
+#define FROM_MASTER 1 /* setting a message type */
+#define FROM_WORKER 2 /* setting a message type */
+
+
 extern char**environ;
 int sizeOfMatrix = 0;
 
@@ -118,11 +125,11 @@ float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1,
     
 }
 
-void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo){
-    for(int i =1; i <= sizeOfMatrix; i++ ){
+void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo, int offset, int row, Node* front, Node* rear){
+    for(int i =offset; i <= row + offset; i++ ){
         for(int j =1; j <= sizeOfMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            if(result!=0) Enqueue(i,j,result);
+            if(result!=0) Enqueue(&front, &rear, i, j, result);
         }
     }
 }
@@ -133,51 +140,123 @@ int sortFile(char fileName[],char column[] ){
 }
 
 int main(int argc, char**argv){
-    
-    //TODO fork error, dosent sort the file, second file sorted into reverse order.
-    
-    pid_t pid_1,pid_2;
-    if( (pid_1 = fork() ) < 0 ){
-        perror("Fork Failed.");
-    }else if (pid_1 == 0){
-        int status_1 = sortFile(argv[1],"1");
-        int status_2 = 0;
-        pid_t pid_2 =fork();
-        
-        if( (pid_2 = fork()) < 0){
-            perror("Fork Failed.");
-        }else if(pid_2 == 0){
-            status_2 = sortFile(argv[2],"2");
-        }else{
-            int returnStatus_2;
-            waitpid(pid_2, &returnStatus_2, 0);
-            exit(status_2);
-        }
-        exit(status_1);
-    }else{
-        int returnStatus;
-        waitpid(pid_1, &returnStatus, 0);
-        if (returnStatus == 0)  // Verify child process terminated without error.
-        {
-            int lines1 = getlines(argv[1]);
-            printf("lines%d\n",lines1);
-            int row1[lines1];
-            int col1[lines1];
-            float data1[lines1];
-            
-            int lines2 = getlines(argv[2]);
-            int row2[lines2];
-            int col2[lines2];
-            float data2[lines2];
-            
-            readMatrix(argv[1],row1,col1,data1);
-            readMatrix(argv[2],row2,col2,data2);
+    int numtasks, /* number of tasks in partition */
+    taskid, /* a task identifier */
+    numworkers, /* number of worker tasks */
+    source, /* task id of message source */
+    dest, /* task id of message destination */
+    mtype, /* message type */
+    rows, /* rows of matrix A sent to each worker */
+    averow, extra, offset; /* used to determine rows sent to each worker */
 
-            matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
-            Print();
-        }
-        
+    struct Node* front = NULL;
+    struct Node* rear = NULL;
+
+    int lines1, lines2;
+    int row1[],row2[], col1[],col2[];
+    float data1[],data2[]; 
+
+    MPI_Status status;
+    MPI_Init(&argc,&argv);
+    MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
+    MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
+    if (numtasks < 2 ) {
+        printf("Need at least two MPI tasks. Quitting...\n");
+        MPI_Abort(MPI_COMM_WORLD, rc);
+        exit(1);
     }
-    
+    numworkers = numtasks-1;
+
+    if (taskid == MASTER){       
+        printf("mpi_mm has started with %d tasks.\n",numtasks);
+        printf("Initializing arrays...\n");
+
+        //TODO fork error, dosent sort the file, second file sorted into reverse order.
+        pid_t pid_1,pid_2;
+        if( (pid_1 = fork() ) < 0 ){
+            perror("Fork Failed.");
+        }else if (pid_1 == 0){
+            int status_1 = sortFile(argv[1],"1");
+            int status_2 = 0;
+            pid_t pid_2 =fork();
+            
+            if( (pid_2 = fork()) < 0){
+                perror("Fork Failed.");
+            }else if(pid_2 == 0){
+                status_2 = sortFile(argv[2],"2");
+            }else{
+                int returnStatus_2;
+                waitpid(pid_2, &returnStatus_2, 0);
+                exit(status_2);
+            }
+            exit(status_1);
+        }else{
+            int returnStatus;
+            waitpid(pid_1, &returnStatus, 0);
+            if (returnStatus == 0)  // Verify child process terminated without error.
+            {
+                lines1 = getlines(argv[1]);
+                printf("lines%d\n",lines1);
+                row1[lines1];
+                col1[lines1];
+                data1[lines1];
+                
+                lines2 = getlines(argv[2]);
+                row2[lines2];
+                col2[lines2];
+                data2[lines2];
+                
+                readMatrix(argv[1],row1,col1,data1);
+                readMatrix(argv[2],row2,col2,data2);
+            }
+        }
+        if (lines1 == 0 || lines2 == 0) {
+            printf("Empty file\n");
+            MPI_Abort(MPI_COMM_WORLD, rc);
+            exit(1);
+        }
+
+        averow = sizeOfMatrix/numworkers;
+        extra = sizeOfMatrix%numworkers;
+        offset = 0;
+        mtype = FROM_MASTER;
+
+        for (dest=1; dest<=numworkers; dest++){
+            rows = (dest <= extra) ? averow+1 : averow;
+            printf("Sending %d rows to task %d offset=%d\n",rows,dest,offset);
+            MPI_Send(&offset , 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&row1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&col1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&data1, lines1, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+
+            offset = offset + rows;
+        }
+
+        mtype = FROM_WORKER;
+        for (i=1; i<=numworkers; i++){
+            source = i;
+            // TODO
+        }
+    }
+
+    if(taskid > MASTER){
+        mtype = FROM_MASTER
+        MPI_Recv(&offset, 1, MPI_Init, MASTER, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&row1, lines1, MPI_Init, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(&col1, lines1, MPI_Init, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(&row2, lines2, MPI_Init, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(&col2, lines2, MPI_Init, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        printf("Received results from task %d\n",source);
+    }
+        matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, &front, &rear);
+        //Print();
+
     return 0;
 }

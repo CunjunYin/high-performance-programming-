@@ -2,11 +2,9 @@
 #include<stdlib.h>
 #include "LinkedQueue.h"
 // Two glboal variables to store address of front and rear nodes. 
-struct Node* front = NULL;
-struct Node* rear = NULL;
 
 // To Enqueue an integer
-void Enqueue(int row, int col, float data) {
+void Enqueue(Node* front, Node* rear,int row, int col, float data) {
 	struct Node* temp = 
 		(struct Node*)malloc(sizeof(struct Node));
 	temp->row = row;
@@ -22,7 +20,7 @@ void Enqueue(int row, int col, float data) {
 }
 
 // To Dequeue an integer.
-void Dequeue() {
+void Dequeue(Node* front, Node* rear) {
 	struct Node* temp = front;
 	if(front == NULL) {
 		printf("Queue is Empty\n");
@@ -37,14 +35,14 @@ void Dequeue() {
 	free(temp);
 }
 
-int Front() {
+int Front(Node* front) {
 	if(front == NULL) {
 		printf("Queue is empty\n");
 	}
 	return front->data;
 }
 
-void Print() {
+void Print(Node* front) {
 	struct Node* temp = front;
 	while(temp != NULL) {
 		printf("%d, %d, %f \n",temp->row, temp->col, temp->data);

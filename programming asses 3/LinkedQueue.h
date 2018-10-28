@@ -9,7 +9,7 @@ struct Node {
 	struct Node* next;
 };
 
-void Enqueue(int row, int col, float data);
+void Enqueue(Node* front, Node* rear, int row, int col, float data);
 void Dequeue();
 int Front();
 void Print();
