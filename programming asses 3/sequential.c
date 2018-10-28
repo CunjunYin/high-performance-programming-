@@ -129,7 +129,7 @@ void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* co
     //TODO
     int end = 0;
     if( (end = row+offset)>sizeMatrix ) end = sizeMatrix;
-    for(int i = offset; i <= row + offset; i++ ){
+    for(int i = offset; i <= end; i++ ){
         for(int j =1; j <= sizeMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
             //if(result!=0) Enqueue(front, rear, i, j, result);
@@ -139,9 +139,18 @@ void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* co
     //TODO
 }
 
-int sortFile(char fileName[],char column[] ){
-    char* args[] = {"/usr/bin/sort","-t","\t","-n","-o",fileName,"-k",column,fileName,NULL};
-    return execve(args[0],args,environ);
+void i_toString(int* a, int start, int end){
+    for(int i= start; i <= end; i++){
+        printf("%d ",a[i]);
+    }
+    printf("\n");
+}
+
+void f_toString(float* a, int start, int end){
+    for(int i= start; i <= end; i++){
+        printf("%f ",a[i]);
+    }
+    printf("\n");
 }
 
 int main(int argc, char**argv){
@@ -238,18 +247,28 @@ int main(int argc, char**argv){
         MPI_Recv(&averow, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
-        MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&row1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
 
-        MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        printf("Received results from task %d\n",source);
-    
-        matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, averow,sizeOfMatrix);
+
+        printf("offset = %d\n",offset);
+        printf("averow = %d\n",averow);
+        printf("sizeOfMatrix = %d", sizeOfMatrix);
+
+        i_toString(row1,0,lines1);
+        i_toString(col1,0,lines1);
+        f_toString(data1,0,lines1);
+
+        i_toString(row2,0,lines2);
+        i_toString(col2,0,lines2);
+        f_toString(data2,0,lines2);
+        //matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, averow,sizeOfMatrix);
     }
     MPI_Finalize();
 
