@@ -20,6 +20,10 @@
 extern char**environ;
 int sizeOfMatrix = 0;
 
+int result_row[10]
+int result_col[10];
+float result_data[10];
+
 
 int getlines(char fileName[]){
     int lines = 0;
@@ -127,13 +131,19 @@ float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1,
 
 void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo, int offset, int row, int sizeMatrix){
     //TODO
+    int used = 0;
     int end = 0;
     if( (end = row+offset)>sizeMatrix ) end = sizeMatrix;
+
     for(int i = offset; i <= end; i++ ){
         for(int j =1; j <= sizeMatrix; j++ ){
             float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            //if(result!=0) Enqueue(front, rear, i, j, result);
-            printf("%d %d %f\n",i,j,result);
+            if(result!=0){
+                result_row[used] = i;
+                result_col[used] = j;
+                result_data[used] = result;
+                used++;
+            } 
         }
     }
     //TODO
@@ -222,6 +232,18 @@ int main(int argc, char**argv){
             MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
             offset = offset + rows+1;
         }
+
+        mtype = FROM_WORKER;
+        for (i=1; i<=numworkers; i++){
+            source = i;
+            MPI_Recv(&result_row, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+            MPI_Recv(&result_col, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+            MPI_Recv(&result_data, 10, MPI_FLOAT, source , mtype, MPI_COMM_WORLD, &status);
+            int i = 0;
+            while(result_data[i]!=0){
+                printf("%d %d %f\n",result_row[i],result_col[i],result_data[i]);
+            }
+        }
     }
 
     if(taskid > MASTER){
@@ -252,6 +274,11 @@ int main(int argc, char**argv){
         i_toString(col2,0,lines2);
         f_toString(data2,0,lines2);*/
         matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, sizeOfMatrix);
+
+        mtype = FROM_WORKER;
+        MPI_Send(&result_row,10,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
+        MPI_Send(&result_col,10,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
+        MPI_Send(&result_data,10,MPI_FLOAT,MASTER,mtype,MPI_COMM_WORLD);
     }
     MPI_Finalize();
 
