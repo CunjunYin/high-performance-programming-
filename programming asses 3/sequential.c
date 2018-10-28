@@ -153,8 +153,8 @@ int main(int argc, char**argv){
     struct Node* rear = NULL;
 
     int lines1, lines2;
-    int row1[],row2[], col1[],col2[];
-    float data1[],data2[]; 
+    int* row1,*row2, *col1,*col2;
+    float *data1,*data2; 
 
     MPI_Status status;
     MPI_Init(&argc,&argv);
@@ -197,14 +197,14 @@ int main(int argc, char**argv){
             {
                 lines1 = getlines(argv[1]);
                 printf("lines%d\n",lines1);
-                row1[lines1];
-                col1[lines1];
-                data1[lines1];
+                row1 = (int*)malloc(line1*sizeof(int));
+                col1 = (int*)malloc(line1*sizeof(int));
+                data1 = (float*)malloc(line1*sizeof(float));
                 
                 lines2 = getlines(argv[2]);
-                row2[lines2];
-                col2[lines2];
-                data2[lines2];
+                row2 = (int*)malloc(line2*sizeof(int));
+                col2 = (int*)malloc(line2*sizeof(int));
+                data2 = (float*)malloc(line2*sizeof(float));
                 
                 readMatrix(argv[1],row1,col1,data1);
                 readMatrix(argv[2],row2,col2,data2);
@@ -236,11 +236,11 @@ int main(int argc, char**argv){
             offset = offset + rows;
         }
 
-        mtype = FROM_WORKER;
+        /*mtype = FROM_WORKER;
         for (i=1; i<=numworkers; i++){
             source = i;
             // TODO
-        }
+        }*/
     }
 
     if(taskid > MASTER){
@@ -254,9 +254,13 @@ int main(int argc, char**argv){
         MPI_Recv(&col2, lines2, MPI_Init, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
         printf("Received results from task %d\n",source);
-    }
+    
         matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, &front, &rear);
         //Print();
+        mtype = FROM_WORKER;
+        MPI_Send(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+
+    }
 
     return 0;
 }
