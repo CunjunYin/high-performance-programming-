@@ -178,10 +178,7 @@ void init(){
     result_data = (float*) malloc( sizeof(float) * result_size );
     checkMalloc();
     
-    //TODO master
-    readMatrix(argv[1]);
-    file1 = false;
-    readMatrix(argv[2]);
+
     /*
      master receive
      result_size
@@ -206,6 +203,10 @@ void init(){
 
 int main(int argc, char**argv){
     init();
+    //TODO master
+    readMatrix(argv[1]);
+    file1 = false;
+    readMatrix(argv[2]);
     matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
     
     return 0;
