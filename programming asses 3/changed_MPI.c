@@ -4,48 +4,73 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <sys/time.h>
 #include <mpi.h>
-#include "LinkedQueue.h"
+//#include "linkedList.h"
 
+void checkMalloc();
+// compile with gcc -o seq  sequential.c linkedList.c
 
-// compile with gcc -o seq  sequential.c LinkedQueue.c
-#define MAX(a,b) (((a)>(b))?(a):(b))
 #define DELIMTER " "
+#define MAX(a,b) (((a)>(b))?(a):(b))
 #define MASTER 0 /* taskid of first task */
 #define FROM_MASTER 1 /* setting a message type */
 #define FROM_WORKER 2 /* setting a message type */
 
+int sizeOfMatrix = 10; // send to worker
 
-extern char**environ;
-int sizeOfMatrix = 0;
+int lines1 = 0; // send to worker
+int* row1 = NULL; // send 
+int* col1 = NULL;   // send
+float* data1 = NULL;   // send
 
-int result_row[10];
-int result_col[10];
-float result_data[10];
+int lines2 = 0; // send
+int* row2 = NULL; // send
+int* col2 = NULL; // send
+float* data2 = NULL; //send
 
+int result_size = 0; // worker to  master
+int* result_row = NULL; // worker to mster
+int* result_col = NULL; // worker to master
+float* result_data =NULL; // worker to master
 
-int getlines(char fileName[]){
-    int lines = 0;
-    FILE *dict = fopen(fileName,"r");
-    while(!feof(dict)){
-        char ch = fgetc(dict);
-        if(ch == '\n') lines++;
-    }
-    fclose(dict);
-    return lines;
-}
-void readMatrix(char fileName[], int* row, int* col, float* data){
+bool file1 = true;
+
+void readMatrix(char fileName[]){
     char line[BUFSIZ];
     FILE *dict = fopen(fileName,"r");
-    int j  = 0;
-    while(fgets(line, sizeof line, dict) != NULL ){
-        row[j] = atoi( strtok(line, DELIMTER) );
-        col[j] = atoi( strtok(NULL, DELIMTER) );
-        sizeOfMatrix = MAX(row[j], sizeOfMatrix);
-        sizeOfMatrix = MAX(col[j], sizeOfMatrix);
-        data[j] = atof( strtok(NULL, DELIMTER) );
-        j++;
+    
+    if(file1 == true){
+        int j = 0;
+        while(fgets(line, sizeof line, dict) != NULL ){
+            lines1++;
+            row1 = (int*) realloc( row1,  lines1 * sizeof(int) );
+            col1 = (int*) realloc( col1, lines1 * sizeof(int) );
+            data1 = (float*) realloc( data1, lines1 * sizeof(float) );
+            
+            row1[j] = atoi( strtok(line, DELIMTER) );
+            col1[j] = atoi( strtok(NULL, DELIMTER) );
+            data1[j] = atof( strtok(NULL, DELIMTER) );
+            
+            sizeOfMatrix = MAX(row1[j], sizeOfMatrix);
+            sizeOfMatrix = MAX(col1[j], sizeOfMatrix);
+            j++;
+        }
+    }else{
+        int j = 0;
+        while(fgets(line, sizeof line, dict) != NULL ){
+            lines2++;
+            row2 = (int*) realloc( row2,  lines2 * sizeof(int) );
+            col2 = (int*) realloc( col2, lines2 * sizeof(int) );
+            data2 = (float*) realloc( data2, lines2 * sizeof(float) );
+            
+            row2[j] = atoi( strtok(line, DELIMTER) );
+            col2[j] = atoi( strtok(NULL, DELIMTER) );
+            data2[j] = atof( strtok(NULL, DELIMTER) );
+            
+            sizeOfMatrix = MAX(row2[j], sizeOfMatrix);
+            sizeOfMatrix = MAX(col2[j], sizeOfMatrix);
+            j++;
+        }
     }
     fclose(dict);
 }
@@ -77,12 +102,9 @@ int InsertionSearch(int a[], int value, int low, int high){
     return -1;
 }
 
-//prform the search operation to get high and low index
-//******11111*******
-//      ^   ^
 void getLowAndHighIndex(int* array,int size, int value, int*start, int* end){
     // get high index
-
+    
     int index = binarysearch(array,value,size);
     int i = index + 1;
     for(    ; i<= size; i++){
@@ -102,51 +124,64 @@ void getLowAndHighIndex(int* array,int size, int value, int*start, int* end){
     *start = j+1;
 }
 
-float perofrmCaculation(int*col1, float* data1, int*row2, float* data2, int low1, int high1, int low2, int high2){
+float perofrmCaculation(int* f1_col, float* f1_data, int* f2_row, float* f2_data, int low1, int high1, int low2, int high2){
+    int i = high1, j = high2;
     float sum = 0;
-    for(int i = low1; i <= high1; i++){
-        for(int j = low2; j <= high2; j++){
-            if( col1[i] == row2[j]  ){
-                sum += (data1[i] * data2[j]);
-                //printf("%f  %f\n",data1[i],data2[j]);
+    for(i = low1 ; i <= high1; i++){
+        for( j = low2 ; j <= high2; j++){
+            if( f1_col[i] == f2_row[j]  ){
+                sum += (f1_data[i] * f2_data[j]);
                 break;
             }
         }
     }
     return sum;
-    
 }
 
-float caculation(int rowC, int colC, int*row1, int*col1, float*data1, int size1, int*row2, int* col2, float* data2, int size2){
+float caculation(int rowC, int colC,
+                 int* f1_row, int* f1_col, float* f1_data, int f1_size,
+                 int* f2_row, int* f2_col, float* f2_data, int f2_size){
     float result = 0;
     int startIndex1 = -1,endIndex1 = -1,startIndex2 = -1, endIndex2 = -1;
-    getLowAndHighIndex(row1, size1, rowC, &startIndex1, &endIndex1);
-    getLowAndHighIndex(col2, size2, colC, &startIndex2, &endIndex2);
+    getLowAndHighIndex(f1_row, f1_size, rowC, &startIndex1, &endIndex1);
+    getLowAndHighIndex(f2_col, f2_size, colC, &startIndex2, &endIndex2);
     
-    result  = perofrmCaculation(col1, data1, row2, data2, startIndex1, endIndex1, startIndex2, endIndex2);
+    result  = perofrmCaculation(f1_col, f1_data, f2_row, f2_data, startIndex1, endIndex1, startIndex2, endIndex2);
     
     return result;
     
 }
 
-void matrixMutilplication(int* row1, int* col1, float* data1, int* row2, int* col2, float* data2 ,int sizeOne, int sizeTwo, int offset, int row, int sizeMatrix){
-    //TODO
-    int used = 0;
-    int end = 0;
-    if( (end = row+offset)>sizeMatrix ) end = sizeMatrix;
-
-    for(int i = offset; i <= end; i++ ){
-        for(int j =1; j <= sizeMatrix; j++ ){
-            float result = caculation(i, j, row1, col1, data1, sizeOne, row2, col2, data2, sizeTwo);
-            if(result!=0){
-                result_row[used] = i;
-                result_col[used] = j;
-                result_data[used] = result;
-                used++;
-            } 
+void matrixMutilplication(int* f1_row, int* f1_col, float* f1_data,
+                          int* f2_row, int* f2_col, float* f2_data,
+                          int sizeOne, int sizeTwo){
+#pragma omp parallel
+    {
+#pragma omp for
+        //TODO change the sizeOfMatrix to the send size;
+        for(int i =1; i <= sizeOfMatrix; i++ ){
+            for(int j =1; j <= sizeOfMatrix; j++ ){
+                float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo);
+                if(result != 0) printf("%d %d %f\n",i,j,result);
+            }
         }
     }
-    //TODO
+}
+
+void init(){
+    row1 = (int*) malloc( sizeof(int) * lines1 );
+    col1 = (int*) malloc( sizeof(int) * lines1 );
+    data1 = (float*) malloc( sizeof(float) * lines1 );
+    
+    row2 = (int*) malloc( sizeof(int) * lines2 );
+    col2 = (int*) malloc( sizeof(int) * lines2 );
+    data2 = (float*) malloc( sizeof(float)* lines2 );
+    
+    result_row = (int*) malloc( sizeof(int) * result_size );
+    result_col = (int*) malloc( sizeof(int) * result_size );
+    result_data = (float*) malloc( sizeof(float) * result_size );
+    checkMalloc();
+    
 }
 
 void i_toString(int* a, int start, int end){
@@ -164,24 +199,17 @@ void f_toString(float* a, int start, int end){
 }
 
 int main(int argc, char**argv){
+    
     int numtasks, /* number of tasks in partition */
     taskid, /* a task identifier */
     numworkers, /* number of worker tasks */
     source, /* task id of message source */
     dest, /* task id of message destination */
     mtype, rc, /* message type */
-    rows, /* rows of matrix A sent to each worker */
-    averow, extra, offset; /* used to determine rows sent to each worker */
+    partition, /* rows of matrix A sent to each worker */
+    extra_partition, offset; /* used to determine rows sent to each worker */
 
-    int lines1 = getlines(argv[1]);
-    int row1[lines1];
-    int col1[lines1];
-    float data1[lines1];
-        
-    int lines2 = getlines(argv[2]);
-    int row2[lines2];
-    int col2[lines2];
-    float data2[lines2];
+    init();
 
     MPI_Status status;
     MPI_Init(&argc,&argv);
@@ -194,12 +222,15 @@ int main(int argc, char**argv){
     }
     numworkers = numtasks-1;
 
-    if (taskid == MASTER){       
-        printf("mpi_mm has started with %d tasks.\n",numtasks);
-        printf("Initializing arrays...\n");
+    if(taskid == MASTER){
+        printf("Mpi_mm has started with %d tasks.\n",numtasks);
+        printf("Reading the matrix and allocate the array dynamiclly...\n");
 
-        readMatrix(argv[1],row1,col1,data1);
-        readMatrix(argv[2],row2,col2,data2);
+        //TODO master
+        readMatrix(argv[1]);
+        file1 = false;      // 
+        readMatrix(argv[2]);
+        printf("Memory allocating finsished for rows, clos and data\n");
 
         if (lines1 == 0 || lines2 == 0) {
             printf("Empty file\n");
@@ -207,79 +238,100 @@ int main(int argc, char**argv){
             exit(1);
         }
 
-        averow = sizeOfMatrix/numworkers;
-        extra = sizeOfMatrix%numworkers;
-        offset = 0;
 
-        mtype = FROM_MASTER;
-        for (dest = 1; dest <= numworkers; dest++){
-            rows = (dest <= extra) ? (averow + 1) : averow;
-            printf("Sending %d rows to task %d offset=%d\n",rows,dest,offset);
-            MPI_Send(&offset , 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        // i_toString(row1,0,lines1);
+        // i_toString(col1,0,lines1);
+        // f_toString(data1,0,lines1);
 
-            MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&row1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&col1, lines1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&data1, lines1, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+        // i_toString(row2,0,lines1);
+        // i_toString(col2,0,lines1);
+        // f_toString(data2,0,lines2);
+        //printf("Master node start sending... \n");
 
-            MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-            MPI_Send(&data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-            offset = offset + rows+1;
-        }
-
-        mtype = FROM_WORKER;
-        for (int i=1; i<=numworkers; i++){
-            source = i;
-            MPI_Recv(&result_row, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
-            MPI_Recv(&result_col, 10, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
-            MPI_Recv(&result_data, 10, MPI_FLOAT, source , mtype, MPI_COMM_WORLD, &status);
-            int j = 0;
-            while(result_data[j]!=0.0){
-                printf("%d %d %f\n",result_row[j],result_col[j],result_data[j]);
-                j++;
-            }
-        }
     }
 
     if(taskid > MASTER){
-        mtype = FROM_MASTER;
-        MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-        MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
-        MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        MPI_Recv(&row1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        MPI_Recv(&col1, lines1, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        MPI_Recv(&data1, lines1, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+    //matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
+    printf("Matrix multiplication finished\n");
 
-        MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        MPI_Recv(&row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        MPI_Recv(&col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        MPI_Recv(&data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+    }   
 
-        /*printf("offset = %d\n",offset);
-        printf("averow = %d\n",averow);
-        printf("sizeOfMatrix = %d", sizeOfMatrix);
-
-        i_toString(row1,0,lines1);
-        i_toString(col1,0,lines1);
-        f_toString(data1,0,lines1);
-
-        i_toString(row2,0,lines2);
-        i_toString(col2,0,lines2);
-        f_toString(data2,0,lines2);*/
-        matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2, offset, rows, sizeOfMatrix);
-
-        mtype = FROM_WORKER;
-        MPI_Send(&result_row,10,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
-        MPI_Send(&result_col,10,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
-        MPI_Send(&result_data,10,MPI_FLOAT,MASTER,mtype,MPI_COMM_WORLD);
-    }
     MPI_Finalize();
 
+    // worker
+    //
+
+
+
+    /*
+     master receive
+     result_size
+     result_row = (int*) realloc( row1,  result_size * sizeof(int) );
+     result_col = (int*) realloc( col1, result_size * sizeof(int) );
+     result_data = (float*) realloc( data1, result_size * sizeof(float) );
+     */
+    
+    //TODO worker after worker receive
+    /*
+     
+     row1 = (int*) realloc( row1,  lines1 * sizeof(int) );
+     col1 = (int*) realloc( col1, lines1 * sizeof(int) );
+     data1 = (float*) realloc( data1, lines1 * sizeof(float) );
+     
+     row2 = (int*) realloc( row2,  lines2 * sizeof(int) );
+     col2 = (int*) realloc( col2, lines2 * sizeof(int) );
+     data2 = (float*) realloc( data2, lines2 * sizeof(float) );
+     */
+
+    
     return 0;
 }
+
+void checkMalloc(){
+    if(row1 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(col1 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(data1 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(row2 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(col2 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(data2 == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(result_row == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(result_col == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+    
+    if(result_data == NULL){
+        printf("malloc error");
+        exit(0);
+    }
+}
+
