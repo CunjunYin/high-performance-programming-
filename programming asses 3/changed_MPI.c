@@ -207,7 +207,7 @@ int main(int argc, char**argv){
     dest, /* task id of message destination */
     mtype, rc, /* message type */
     partition, /* rows of matrix A sent to each worker */
-    extra_partition, offset; /* used to determine rows sent to each worker */
+    extra_partition, offset, index_need_find, temp_offset; /* used to determine rows sent to each worker */
 
     init();
 
@@ -220,7 +220,6 @@ int main(int argc, char**argv){
         MPI_Abort(MPI_COMM_WORLD, rc);
         exit(1);
     }
-    numworkers = numtasks-1;
 
     if(taskid == MASTER){
         printf("Mpi_mm has started with %d tasks.\n",numtasks);
@@ -238,6 +237,78 @@ int main(int argc, char**argv){
             exit(1);
         }
 
+        numworkers = (numworkers > sizeOfMatrix) ? sizeOfMatrix : numtasks - 1;
+
+        partition = sizeOfMatrix/numworkers;
+        extra_partition = sizeOfMatrix%numworkers;
+        offset=1;
+
+        int temp_line1 = lines1;
+        mtype = FROM_MASTER;
+        for (dest = 1; dest < numworkers; dest++){
+
+            index_need_find = (dest <= extra_partition) ? (partition + 1) : partition;
+            //temp_offset = binarysearch(row1, index_need_find, lines1);
+            // if(extra_partition != 0){
+            //     index_need_find += (partition+1);
+            //     extra_partition--;
+            // }
+
+            int counter = 0;
+            for(int i = 0; i < temp_line1; i++){
+                if (row1[i] > index_need_find){
+                    offset += counter;
+                    counter++;
+                    break;
+                }
+            }
+
+            MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(col1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(data1, offset, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+
+            MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+
+
+            for (int i = 0; i < offset; i++){
+                row1 ++;
+                col1 ++;
+                data1 ++;                
+            }
+
+            temp_line1 -= offset;
+            index_need_find += partition;
+
+        }   
+        //printf("Master node start sending... \n");
+
+    }
+
+    if(taskid > MASTER){
+        mtype = FROM_MASTER;
+        MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        row1 = (int*) realloc( row1,  offset * sizeof(int) );
+        col1 = (int*) realloc( col1, offset * sizeof(int) );
+        data1 = (float*) realloc( data1, offset * sizeof(float) );
+        MPI_Recv(row1, offset, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(col1, offset, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(data1, offset, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+
+
+        MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        row2 = (int*) realloc( row2,  lines2 * sizeof(int) );
+        col2 = (int*) realloc( col2, lines2 * sizeof(int) );
+        data2 = (float*) realloc( data2, lines2 * sizeof(float) );
+        MPI_Recv(row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        
 
         // i_toString(row1,0,lines1);
         // i_toString(col1,0,lines1);
@@ -246,14 +317,9 @@ int main(int argc, char**argv){
         // i_toString(row2,0,lines1);
         // i_toString(col2,0,lines1);
         // f_toString(data2,0,lines2);
-        //printf("Master node start sending... \n");
 
-    }
-
-    if(taskid > MASTER){
-
-    //matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
-    printf("Matrix multiplication finished\n");
+        //matrixMutilplication(row1, col1, data1, row2, col2, data2, lines1, lines2);
+        printf("Matrix multiplication finished\n");
 
     }   
 
@@ -334,4 +400,3 @@ void checkMalloc(){
         exit(0);
     }
 }
-
