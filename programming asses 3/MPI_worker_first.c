@@ -5,7 +5,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <mpi.h>
-//#include "linkedList.h"
+#include "LinkedQueue.h"
+#include <omp.h>
 
 void checkMalloc();
 // compile with gcc -o seq  sequential.c linkedList.c
@@ -155,14 +156,18 @@ float caculation(int rowC, int colC,
 void matrixMutilplication(int* f1_row, int* f1_col, float* f1_data,
                           int* f2_row, int* f2_col, float* f2_data,
                           int sizeOne, int sizeTwo){
-#pragma omp parallel
+#pragma omp parallel reduction(+:result_size)
     {
 #pragma omp for
         //TODO change the sizeOfMatrix to the send size;
         for(int i = f1_row[0]; i <= f1_row[sizeOne-1]; i++ ){
             for(int j =1; j <= sizeOfMatrix; j++ ){
                 float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo);
-                if(result != 0) printf("%d %d %f\n",i,j,result);
+                if(result != 0) {
+                    //printf("%d %d %f\n",i,j,result);
+                    Enqueue(i, j, result);
+                    result_size++;
+                }
             }
         }
     }
@@ -183,6 +188,7 @@ void init(){
     checkMalloc();
     
 }
+
 
 void i_toString(int* a, int start, int end){
     for(int i= start; i < end; i++){
@@ -224,8 +230,7 @@ int main(int argc, char**argv){
     if(taskid == MASTER){
         printf("Mpi_mm has started with %d tasks.\n",numtasks);
         printf("Reading the matrix and allocate the array dynamiclly...\n");
-        
-        //TODO master
+    
         readMatrix(argv[1]);
         file1 = false;      //
         readMatrix(argv[2]);
@@ -237,17 +242,14 @@ int main(int argc, char**argv){
             exit(1);
         }
         
-        
-        //numworkers = (numworkers > sizeOfMatrix) ? lines1 : numtasks - 1;
         numworkers = numtasks - 1;
-        
         partition = lines1/numworkers;
         extra_partition = lines1%numworkers;
         offset=0;
         int temp_line1 = lines1;
         
         mtype = FROM_MASTER;
-        
+        printf("Mater stats to dristribute data if number of line1 are 5 times more than number of workers\n");
         if( lines1>numworkers*5) {
             for (dest = 1; dest <= numworkers; dest++){
                 MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -330,16 +332,38 @@ int main(int argc, char**argv){
             }
         }
         
-        //printf("Master node start sending... \n");
+        printf("Master finish sending\n");
+        printf("Master start to receive\n");
+        mtype = FROM_WORKER;
+        for (int i=1; i<=numworkers; i++){
+            source = i;
+            MPI_Recv(&result_size, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+            free(result_row);
+            free(result_col);
+            free(result_data);
+            result_row = (int*) malloc( sizeof(int) * result_size );
+            result_col = (int*) malloc( sizeof(int) * result_size );
+            result_data = (float*) malloc( sizeof(float) * result_size );     
+            MPI_Recv(result_row, result_size, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+            MPI_Recv(result_col, result_size, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+            MPI_Recv(result_data, result_size, MPI_FLOAT, source , mtype, MPI_COMM_WORLD, &status);
+            
+            for(int i = 0; i < result_size; i++){
+                //printf("workerrrrrrrrrrrrrrrrrrrrrrrrrrr %d\n", i);
+                printf("%d %d %f\n",result_row[i],result_col[i],result_data[i]);
+            }
+        }
+        printf("Master receive finished\n");
     }
     
+
     if(taskid > MASTER){
+        printf("worker starts to receive\n");
         mtype = FROM_MASTER;
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         
         MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        
         row1 = (int*) realloc( row1,  offset * sizeof(int) );
         col1 = (int*) realloc( col1, offset * sizeof(int) );
         data1 = (float*) realloc( data1, offset * sizeof(float) );
@@ -349,24 +373,40 @@ int main(int argc, char**argv){
         
         
         MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
-        
         row2 = (int*) realloc( row2,  lines2 * sizeof(int) );
         col2 = (int*) realloc( col2, lines2 * sizeof(int) );
         data2 = (float*) realloc( data2, lines2 * sizeof(float) );
         MPI_Recv(row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
-        
-        printf("worker id: %d \n",taskid);
+
+
+        printf("worker id: is doing the matrix matrixMutilplication%d \n",taskid);
         if(offset > 0){
             matrixMutilplication(row1, col1, data1,
                                 row2, col2, data2,
                                  offset, lines2);
+
+        result_row = (int*) realloc(result_row, sizeof(int) * result_size );
+        result_col = (int*) realloc( result_col, sizeof(int) * result_size );
+        result_data = (float*) realloc(result_data, sizeof(float) * result_size );
+        
+        queueToArrays(result_row, result_col, result_data);
+
+        //i_toString(result_row,0,result_size-1);
+        //Print();
         }
+
+        printf("Worker finish the work and sending back to Master\n");
+        mtype = FROM_WORKER;
+        MPI_Send(&result_size, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+        MPI_Send(result_row,result_size,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
+        MPI_Send(result_col,result_size,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
+        MPI_Send(result_data,result_size,MPI_FLOAT,MASTER,mtype,MPI_COMM_WORLD);
     }
     
+    printf("Fished Yeah!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     MPI_Finalize();
-    
     return 0;
 }
 
