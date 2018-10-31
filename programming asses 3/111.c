@@ -247,19 +247,44 @@ int main(int argc, char**argv){
         int temp_line1 = lines1;
         
         mtype = FROM_MASTER;
-        for (dest = 1; dest <= numworkers; dest++){
-            if(dest != numworkers){
-                
-                temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
-                int temp_number = row1[temp_offset];
-                int counter = 0;
-                for(int i = temp_offset; i < temp_line1; i++){
-                    if (row1[i] != temp_number){
-                        break;
+        
+        if( lines1>numworkers*5) {
+            for (dest = 1; dest <= numworkers; dest++){
+                if(dest != numworkers){
+                    
+                    temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
+                    int temp_number = row1[temp_offset];
+                    int counter = 0;
+                    for(int i = temp_offset; i < temp_line1; i++){
+                        if (row1[i] != temp_number){
+                            break;
+                        }
+                        counter++;
                     }
-                    counter++;
-                }
-                if(temp_offset>temp_line1){
+                    
+                    offset = temp_offset + counter;
+                    
+                    MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(col1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(data1, offset, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+                    
+                    MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+                    
+                    for (int i = 0; i < offset; i++){
+                        row1 ++;
+                        col1 ++;
+                        data1 ++;
+                    }
+                    
+                    temp_line1 -= offset;
+                    offset = 0;
+                    
+                }else{
                     offset = temp_line1;
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -271,46 +296,22 @@ int main(int argc, char**argv){
                     MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-                    break;
-                    
                 }
-                
-                offset = temp_offset + counter;
-                
-                MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(col1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(data1, offset, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-                
-                MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-                
-                for (int i = 0; i < offset; i++){
-                    row1 ++;
-                    col1 ++;
-                    data1 ++;
-                }
-                
-                temp_line1 -= offset;
-                offset = 0;
-                
-            }else{
-                offset = temp_line1;
-                MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(col1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(data1, offset, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
-                
-                MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-                MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
             }
+        }else{
+            offset = lines1;
+            MPI_Send(&lines1, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(&offset, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(row1, offset, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(col1, offset, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(data1, offset, MPI_FLOAT, 1, mtype, MPI_COMM_WORLD);
+            
+            MPI_Send(&lines2, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(row2, lines2, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(col2, lines2, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            MPI_Send(data2, lines2, MPI_FLOAT, 1, mtype, MPI_COMM_WORLD);
         }
+        
         //printf("Master node start sending... \n");
     }
     
