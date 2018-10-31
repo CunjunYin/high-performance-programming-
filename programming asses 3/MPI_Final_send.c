@@ -256,6 +256,10 @@ int main(int argc, char**argv){
                 if(dest != numworkers){
                     
                     temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
+                    
+                    if(temp_offset > temp_line1){
+                        temp_offset = temp_line1;   
+                    }
                     int temp_number = row1[temp_offset];
                     int counter = 0;
                     for(int i = temp_offset; i < temp_line1; i++){
