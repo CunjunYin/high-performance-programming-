@@ -16,7 +16,7 @@ void checkMalloc();
 #define FROM_MASTER 1 /* setting a message type */
 #define FROM_WORKER 2 /* setting a message type */
 
-int sizeOfMatrix = 10; // send to worker
+int sizeOfMatrix = 0; // send to worker
 
 int lines1 = 0; // send to worker
 int* row1 = NULL; // send
@@ -250,6 +250,7 @@ int main(int argc, char**argv){
         
         if( lines1>numworkers*5) {
             for (dest = 1; dest <= numworkers; dest++){
+                MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 if(dest != numworkers){
                     
                     temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
@@ -263,7 +264,6 @@ int main(int argc, char**argv){
                     }
                     
                     offset = temp_offset + counter;
-                    MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -286,7 +286,7 @@ int main(int argc, char**argv){
                     
                 }else{
                     offset = temp_line1;
-                    MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                    
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -301,7 +301,8 @@ int main(int argc, char**argv){
             }
         }else{
             offset = lines1;
-            MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+            MPI_Send(&sizeOfMatrix, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
+            
             MPI_Send(&lines1, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(&offset, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(row1, offset, MPI_INT, 1, mtype, MPI_COMM_WORLD);
@@ -315,6 +316,7 @@ int main(int argc, char**argv){
             offset = 0;
             for (dest = 2; dest <= numworkers; dest++){
                 MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                
                 MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -334,6 +336,7 @@ int main(int argc, char**argv){
     if(taskid > MASTER){
         mtype = FROM_MASTER;
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        
         MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         
