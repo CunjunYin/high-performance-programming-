@@ -277,21 +277,21 @@ int main(int argc, char**argv){
                     MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
                     
-                    for (int i = 0; i < offset; i++){
-                        row1 ++;
-                        col1 ++;
-                        data1 ++;
+                    temp_line1 -= offset;
+                    if(temp_line1 > 0){
+                        for (int i = 0; i < offset; i++){
+                            row1 ++;
+                            col1 ++;
+                            data1 ++;
+                        }
+                    }else{
+                        temp_line1 = 0;
                     }
                     
-                    temp_line1 -= offset;
                     offset = 0;
                     
                 }else{
-                    if(temp_line1 <= 0){
-                        offset = 0;
-                    }else{
-                        offset = temp_line1;
-                    }
+                    offset = temp_line1;
                     
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
