@@ -244,7 +244,7 @@ int main(int argc, char**argv){
         
         numworkers = numtasks - 1;
         partition = lines1/numworkers;
-        extra_partition = lines1%numworkers;
+        //extra_partition = lines1%numworkers;
         offset=0;
         int temp_line1 = lines1;
         
@@ -255,12 +255,12 @@ int main(int argc, char**argv){
                 MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 if(dest != numworkers){
                     
-                    temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
+                    //temp_offset = (dest <= extra_partition) ? (partition + 1) : partition;
                     
-                    if(temp_offset > temp_line1){
-                        temp_offset = temp_line1;   
+                    if(partition > temp_line1){
+                        partition = temp_line1;   
                     }
-                    int temp_number = row1[temp_offset];
+                    int temp_number = row1[partition-1];
                     int counter = 0;
                     for(int i = temp_offset; i < temp_line1; i++){
                         if (row1[i] != temp_number){
