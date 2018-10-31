@@ -287,7 +287,11 @@ int main(int argc, char**argv){
                     offset = 0;
                     
                 }else{
-                    offset = temp_line1;
+                    if(temp_line1 <= 0){
+                        offset = 0;
+                    }else{
+                        offset = temp_line1;
+                    }
                     
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
