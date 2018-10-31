@@ -159,7 +159,7 @@ void matrixMutilplication(int* f1_row, int* f1_col, float* f1_data,
     {
 #pragma omp for
         //TODO change the sizeOfMatrix to the send size;
-        for(int i = sizeOfMatrix; i <= sizeOfMatrix; i++ ){
+        for(int i = f1_row[0]; i <= f1_row[sizeOne-1]; i++ ){
             for(int j =1; j <= sizeOfMatrix; j++ ){
                 float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo);
                 if(result != 0) printf("%d %d %f\n",i,j,result);
@@ -263,7 +263,7 @@ int main(int argc, char**argv){
                     }
                     
                     offset = temp_offset + counter;
-                    
+                    MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -286,6 +286,7 @@ int main(int argc, char**argv){
                     
                 }else{
                     offset = temp_line1;
+                    MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -300,6 +301,7 @@ int main(int argc, char**argv){
             }
         }else{
             offset = lines1;
+            MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             MPI_Send(&lines1, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(&offset, 1, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(row1, offset, MPI_INT, 1, mtype, MPI_COMM_WORLD);
@@ -312,6 +314,7 @@ int main(int argc, char**argv){
             MPI_Send(data2, lines2, MPI_FLOAT, 1, mtype, MPI_COMM_WORLD);
             offset = 0;
             for (dest = 2; dest <= numworkers; dest++){
+                MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                 MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -330,8 +333,10 @@ int main(int argc, char**argv){
     
     if(taskid > MASTER){
         mtype = FROM_MASTER;
+        MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&lines1, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        
         row1 = (int*) realloc( row1,  offset * sizeof(int) );
         col1 = (int*) realloc( col1, offset * sizeof(int) );
         data1 = (float*) realloc( data1, offset * sizeof(float) );
@@ -341,14 +346,18 @@ int main(int argc, char**argv){
         
         
         MPI_Recv(&lines2, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
+        
         row2 = (int*) realloc( row2,  lines2 * sizeof(int) );
         col2 = (int*) realloc( col2, lines2 * sizeof(int) );
         data2 = (float*) realloc( data2, lines2 * sizeof(float) );
         MPI_Recv(row2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
+        
         printf("worker id: %d \n",taskid);
-        i_toString(row1,0,offset);
+        matrixMutilplication(row1, col1, data1,
+                            row2, col2, data2,
+                             offset, lines2);
     }
     
     MPI_Finalize();
