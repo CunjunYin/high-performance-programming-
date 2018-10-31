@@ -358,9 +358,11 @@ int main(int argc, char**argv){
         MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
         
         printf("worker id: %d \n",taskid);
-        matrixMutilplication(row1, col1, data1,
-                            row2, col2, data2,
-                             offset, lines2);
+        if(offset > 0){
+            matrixMutilplication(row1, col1, data1,
+                                row2, col2, data2,
+                                 offset, lines2);
+        }
     }
     
     MPI_Finalize();
