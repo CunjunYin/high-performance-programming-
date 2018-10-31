@@ -310,6 +310,19 @@ int main(int argc, char**argv){
             MPI_Send(row2, lines2, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(col2, lines2, MPI_INT, 1, mtype, MPI_COMM_WORLD);
             MPI_Send(data2, lines2, MPI_FLOAT, 1, mtype, MPI_COMM_WORLD);
+            offset = 0;
+            for (dest = 2; dest <= numworkers; dest++){
+                MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(col1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(data1, offset, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+                
+                MPI_Send(&lines2, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(row2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(col2, lines2, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+                MPI_Send(data2, lines2, MPI_FLOAT, dest, mtype, MPI_COMM_WORLD);
+            }
         }
         
         //printf("Master node start sending... \n");
@@ -335,9 +348,7 @@ int main(int argc, char**argv){
         MPI_Recv(col2, lines2, MPI_INT, MASTER, mtype,MPI_COMM_WORLD, &status);
         MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
         
-        
         i_toString(row1,0,offset);
-        printf("Matrix multiplication finished\n");
     }
     
     MPI_Finalize();
