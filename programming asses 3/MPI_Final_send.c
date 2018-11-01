@@ -144,8 +144,40 @@ float caculation(int rowC, int colC,
                  int* f2_row, int* f2_col, float* f2_data, int f2_size){
     float result = 0;
     int startIndex1 = -1,endIndex1 = -1,startIndex2 = -1, endIndex2 = -1;
-    getLowAndHighIndex(f1_row, f1_size, rowC, &startIndex1, &endIndex1);
-    getLowAndHighIndex(f2_col, f2_size, colC, &startIndex2, &endIndex2);
+//     getLowAndHighIndex(f1_row, f1_size, rowC, &startIndex1, &endIndex1);
+//     getLowAndHighIndex(f2_col, f2_size, colC, &startIndex2, &endIndex2);
+    
+    bool found = false;
+    for(int i = 0; i < f1_size; i++){
+        if(f1_row[i] == rowC && found == false){
+            startIndex1 = i;
+            found = true;
+        }
+        if(found == true){
+            if(f1_row[i] == rowC){
+                endIndex1 = i;
+            }
+        }
+    }
+    
+    if(found == false) return result;
+    if(found == true && endIndex1 == -1) endIndex1 = f1_size-1;
+    found = false;
+    for(int i = 0; i < f2_size; i++){
+        if(f2_col[i] == colC && found == false){
+            startIndex2 = i;
+            found = true;
+        }
+        if(found == true){
+            if(f2_col[i] == colC){
+                endIndex2 = i;
+            }
+        }
+    }
+    
+    if(found == false) return result;
+    if(found == true && endIndex2 == -1) endIndex2 = f2_size-1;
+    
     
     result  = perofrmCaculation(f1_col, f1_data, f2_row, f2_data, startIndex1, endIndex1, startIndex2, endIndex2);
     
@@ -228,13 +260,13 @@ int main(int argc, char**argv){
     }
     
     if(taskid == MASTER){
-        printf("Mpi_mm has started with %d tasks.\n",numtasks);
-        printf("Reading the matrix and allocate the array dynamiclly...\n");
+        //printf("Mpi_mm has started with %d tasks.\n",numtasks);
+        //printf("Reading the matrix and allocate the array dynamiclly...\n");
     
         readMatrix(argv[1]);
         file1 = false;      //
         readMatrix(argv[2]);
-        printf("Memory allocating finsished for rows, clos and data\n");
+        //printf("Memory allocating finsished for rows, clos and data\n");
         
         if (lines1 == 0 || lines2 == 0) {
             printf("Empty file\n");
@@ -249,7 +281,7 @@ int main(int argc, char**argv){
         int temp_line1 = lines1;
         
         mtype = FROM_MASTER;
-        printf("Mater stats to dristribute data if number of line1 are 5 times more than number of workers\n");
+        //printf("Mater stats to dristribute data if number of line1 are 5 times more than number of workers\n");
         if( lines1>numworkers*5) {
             for (dest = 1; dest <= numworkers; dest++){
                 MPI_Send(&sizeOfMatrix, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -340,8 +372,8 @@ int main(int argc, char**argv){
             }
         }
         
-        printf("Master finish sending\n");
-        printf("Master start to receive\n");
+        //printf("Master finish sending\n");
+        //printf("Master start to receive\n");
         mtype = FROM_WORKER;
         for (int i=1; i<=numworkers; i++){
             source = i;
@@ -361,12 +393,12 @@ int main(int argc, char**argv){
                 printf("%d %d %f\n",result_row[i],result_col[i],result_data[i]);
             }
         }
-        printf("Master receive finished\n");
+        //printf("Master receive finished\n");
     }
     
 
     if(taskid > MASTER){
-        printf("worker starts to receive\n");
+       // printf("worker starts to receive\n");
         mtype = FROM_MASTER;
         MPI_Recv(&sizeOfMatrix, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD,&status);
         
@@ -389,7 +421,7 @@ int main(int argc, char**argv){
         MPI_Recv(data2, lines2, MPI_FLOAT, MASTER, mtype,MPI_COMM_WORLD, &status);
 
 
-        printf("worker id: is doing the matrix matrixMutilplication%d \n",taskid);
+        //printf("worker id: is doing the matrix matrixMutilplication%d \n",taskid);
         if(offset > 0){
             matrixMutilplication(row1, col1, data1,
                                 row2, col2, data2,
@@ -405,7 +437,7 @@ int main(int argc, char**argv){
         //Print();
         }
 
-        printf("Worker finish the work and sending back to Master\n");
+        //printf("Worker finish the work and sending back to Master\n");
         mtype = FROM_WORKER;
         MPI_Send(&result_size, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
         MPI_Send(result_row,result_size,MPI_INT,MASTER,mtype,MPI_COMM_WORLD);
@@ -413,7 +445,7 @@ int main(int argc, char**argv){
         MPI_Send(result_data,result_size,MPI_FLOAT,MASTER,mtype,MPI_COMM_WORLD);
     }
     
-    printf("Fished Yeah!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    //printf("Fished Yeah!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     MPI_Finalize();
     return 0;
 }
