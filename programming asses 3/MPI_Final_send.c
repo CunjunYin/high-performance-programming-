@@ -262,14 +262,14 @@ int main(int argc, char**argv){
                     }
                     int temp_number = row1[partition-1];
                     int counter = 0;
-                    for(int i = temp_offset; i < temp_line1; i++){
+                    for(int i = partition; i < temp_line1; i++){
                         if (row1[i] != temp_number){
                             break;
                         }
                         counter++;
                     }
                     
-                    offset = temp_offset + counter;
+                    offset = partition + counter;
                     MPI_Send(&lines1, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
                     MPI_Send(row1, offset, MPI_INT, dest, mtype, MPI_COMM_WORLD);
