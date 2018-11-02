@@ -141,28 +141,11 @@ float perofrmCaculation(int* f1_col, float* f1_data, int* f2_row, float* f2_data
 
 float caculation(int rowC, int colC,
                  int* f1_row, int* f1_col, float* f1_data, int f1_size,
-                 int* f2_row, int* f2_col, float* f2_data, int f2_size){
+                 int* f2_row, int* f2_col, float* f2_data, int f2_size, int index1, int index2){
     float result = 0;
-    int startIndex1 = -1,endIndex1 = -1,startIndex2 = -1, endIndex2 = -1;
-//     getLowAndHighIndex(f1_row, f1_size, rowC, &startIndex1, &endIndex1);
-//     getLowAndHighIndex(f2_col, f2_size, colC, &startIndex2, &endIndex2);
+    int startIndex1 = index1, endIndex1 = index2, startIndex2 = -1, endIndex2 = -1;
     
     bool found = false;
-    for(int i = 0; i < f1_size; i++){
-        if(f1_row[i] == rowC && found == false){
-            startIndex1 = i;
-            found = true;
-        }
-        if(found == true){
-            if(f1_row[i] == rowC){
-                endIndex1 = i;
-            }
-        }
-    }
-    
-    if(found == false) return result;
-    if(found == true && endIndex1 == -1) endIndex1 = f1_size-1;
-    found = false;
     for(int i = 0; i < f2_size; i++){
         if(f2_col[i] == colC && found == false){
             startIndex2 = i;
@@ -188,13 +171,30 @@ float caculation(int rowC, int colC,
 void matrixMutilplication(int* f1_row, int* f1_col, float* f1_data,
                           int* f2_row, int* f2_col, float* f2_data,
                           int sizeOne, int sizeTwo){
+    int j;
 #pragma omp parallel reduction(+:result_size)
     {
-#pragma omp for
         //TODO change the sizeOfMatrix to the send size;
         for(int i = f1_row[0]; i <= f1_row[sizeOne-1]; i++ ){
+            int startIndex1 = -1,endIndex1 = -1
+            bool found = false;
+            for(int i = 0; i < f1_size; i++){
+                if(f1_row[i] == rowC && found == false){
+                    startIndex1 = i;
+                    found = true;
+                }
+                if(found == true){
+                    if(f1_row[i] == rowC){
+                        endIndex1 = i;
+                    }
+                }
+            }
+            if(found == false) continue;
+            if(found == true && endIndex1 == -1) endIndex1 = f1_size-1;
+            
+            #pragma omp for firstprivate(i) private(j)
             for(int j =1; j <= sizeOfMatrix; j++ ){
-                float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo);
+                float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo, startIndex1, endIndex1);
                 if(result != 0) {
                     //printf("%d %d %f\n",i,j,result);
                     Enqueue(i, j, result);
