@@ -140,8 +140,8 @@ float perofrmCaculation(int* f1_col, float* f1_data, int* f2_row, float* f2_data
     return sum;
 }
 
-float caculation(int rowC, int colC,
-                 int* f1_row, int* f1_col, float* f1_data, int f1_size,
+float caculation(int colC,
+                 int* f1_col, float* f1_data, int f1_size,
                  int* f2_row, int* f2_col, float* f2_data, int f2_size,
                 int index1, int index2){
     float result = 0;
@@ -174,43 +174,42 @@ float caculation(int rowC, int colC,
 void matrixMutilplication(int* f1_row, int* f1_col, float* f1_data,
                           int* f2_row, int* f2_col, float* f2_data,
                           int sizeOne, int sizeTwo){
-    int j;
     int startIndex1 = -1,endIndex1 = -1;
     bool found;
-#pragma omp parallel reduction(+:result_size)
-    {
-        //TODO change the sizeOfMatrix to the send size;
-        for(int i = f1_row[0]; i <= f1_row[sizeOne-1]; i++ ){
-            startIndex1 = -1;
-            found = false;
-            for(int k = endIndex1+1; k < sizeOne; k++){
-                if(f1_row[k] == i && found == false){
-                    startIndex1 = k;
-                    found = true;
-                }
-                if(found == true){
-                    if(f1_row[k] == i){
-                        endIndex1 = k;
-                    }else{
-                        break;
-                    }
-                }
+    int count = 0;
+    int i,j;
+    //TODO change the sizeOfMatrix to the send size;
+    for(i = f1_row[0]; i <= f1_row[sizeOne-1]; i++ ){
+        startIndex1 = -1;
+        found = false;
+        for(int k = endIndex1+1; k < sizeOne; k++){
+            if(f1_row[k] == i && found == false){
+                startIndex1 = k;
+                found = true;
             }
-            if(found == false) continue;
-            if(found == true && endIndex1 == -1) endIndex1 = sizeOne-1;
-            
-            #pragma omp for firstprivate(i) private(j)
-            for(j =1; j <= sizeOfMatrix; j++ ){
-                float result = caculation(i, j, f1_row, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo, startIndex1, endIndex1);
-                if(result != 0) {
-                    //printf("%d %d %f\n",i,j,result);
-                    Enqueue(i, j, result);
-                    result_size++;
+            if(found == true){
+                if(f1_row[k] == i){
+                    endIndex1 = k;
+                }else{
+                    break;
                 }
             }
         }
+        if(found == false) continue;
+        if(found == true && endIndex1 == -1) endIndex1 = sizeOne-1;
+#pragma omp parallel reduction(+:count)
+{
+            #pragma omp for firstprivate(i) firstprivate(startIndex1) firstprivate(endIndex1) private(j)
+            for(j = 1; j <= sizeOfMatrix; j++ ){
+                float result = caculation(j, f1_col, f1_data, sizeOne, f2_row, f2_col, f2_data, sizeTwo, startIndex1, endIndex1);
+                if(result != 0) {
+                    Enqueue(i, j, result);
+                    count++;
+                }
+            }
+}
     }
-    printf("%d\n",result_size);
+    result_size = count;
 }
 
 void init(){
