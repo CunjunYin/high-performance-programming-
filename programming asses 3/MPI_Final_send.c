@@ -270,8 +270,8 @@ int main(int argc, char**argv){
     if(taskid == MASTER){
         //printf("Mpi_mm has started with %d tasks.\n",numtasks);
         //printf("Reading the matrix and allocate the array dynamiclly...\n");
-        struct timeval start, end;
-        gettimeofday(&start, NULL);
+        /*struct timeval start, end;
+        gettimeofday(&start, NULL);*/
         
         readMatrix(argv[1]);
         file1 = false;      //
@@ -404,11 +404,11 @@ int main(int argc, char**argv){
             }
         }
         //printf("Master receive finished\n");
-        gettimeofday(&end, NULL);
+        /*gettimeofday(&end, NULL);
         double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
         end.tv_usec - start.tv_usec) / 1.e6;
         
-        printf("time=%12.10f\n",delta);
+        printf("time=%12.10f\n",delta);*/
     }
     
 
