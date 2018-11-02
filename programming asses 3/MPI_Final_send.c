@@ -303,8 +303,8 @@ int main(int argc, char**argv){
                         partition = temp_line1;   
                     }
                     int temp_number = row1[partition-1];
-                    int counter = 0;
-                    for(int i = 0; i < temp_line1; i++){
+                    int counter = partiton-1;
+                    for(int i = partition-1; i < temp_line1; i++){
                         if (row1[i] != temp_number){
                             break;
                         }
