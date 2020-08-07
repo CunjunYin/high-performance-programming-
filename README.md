@@ -1,4 +1,4 @@
-# high-performance-programming-
+# CITS3402 High Performance Computing
 parallel programming
 for mac os that unable to run openMP do folowing steps:
 
