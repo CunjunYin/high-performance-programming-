@@ -19,6 +19,7 @@ VM Linux GCC install process:
 
 
 
+```
 Public Function test(ByVal row As Range, ByVal queens As Integer)
     Dim i As Integer
     Dim j As Integer
@@ -41,7 +42,8 @@ Public Function test(ByVal row As Range, ByVal queens As Integer)
     test = count
 
 End Function
-
+```
+```
 Public Function test1(ByVal row As Range, ByVal j As Integer)
     Dim ret As Integer
     
@@ -52,3 +54,4 @@ Public Function test1(ByVal row As Range, ByVal j As Integer)
     
     test1 = ret
 End Function
+```
